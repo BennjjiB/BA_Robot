@@ -5,14 +5,12 @@ project(mycpp)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fopenmp -g3 -O3")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/home/mrenz/ws/3rd-party-lib/eigen-3.4.0/build1")
-include_directories("/home/mrenz/ws/3rd-party-lib/eigen-3.4.0")
+
 
 find_package(Boost REQUIRED COMPONENTS system program_options)
 find_package(OpenMP REQUIRED)
-find_package(Eigen3 3.4.0 EXACT)
+find_package(Eigen3 REQUIRED)
 find_package(pybind11 REQUIRED)
-
 
 include_directories(
   include

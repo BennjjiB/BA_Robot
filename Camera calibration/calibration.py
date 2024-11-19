@@ -13,7 +13,7 @@ SQUARES_VERTICALLY = 14
 SQUARES_HORIZONTALLY = 9
 SQUARE_LENGTH = 0.0188
 MARKER_LENGTH = 0.0146
-PATH_TO_IMAGES = '/home/mrenz/Desktop/Camera calibration/images'
+PATH_TO_IMAGES = '/home/panda3/Desktop/Robot_BA/Camera calibration/images'
 
 calibration_positions = [
         [-0.199427,-0.303889,0.0692703,-2.43281,0.0363531,1.98839,0.840368],

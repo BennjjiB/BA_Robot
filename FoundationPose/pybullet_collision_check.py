@@ -67,7 +67,21 @@ def get_gripping_points(T_base2bricks):
 
         return proj_length_x > proj_length_y and proj_length_x > proj_length_z
     
-    def z_axis_gripper_matches_x_axis_brick(T_gripper, T_brick, tolerance=1e-3):
+    def grips_along_z_axis(finger_1, finger_2, T_base2brick):
+        vector = np.array(finger_1[0]) - np.array(finger_2[0])
+
+        rotation_matrix = T_base2brick[:3, :3]
+        x_axis = rotation_matrix[:, 0]
+        y_axis = rotation_matrix[:, 1]
+        z_axis = rotation_matrix[:, 2]
+
+        proj_length_x = np.abs(np.dot(vector, x_axis) / np.linalg.norm(x_axis))
+        proj_length_y = np.abs(np.dot(vector, y_axis) / np.linalg.norm(y_axis))
+        proj_length_z = np.abs(np.dot(vector, z_axis) / np.linalg.norm(z_axis))
+
+        return proj_length_z > proj_length_y and proj_length_z > proj_length_x
+    
+    def z_axis_gripper_matches_x_axis_brick(T_gripper, T_brick):
         body_trans = T_gripper[0]
         body_quat = T_gripper[1]
 
@@ -81,43 +95,48 @@ def get_gripping_points(T_base2bricks):
 
         dot_product = np.dot(z_axis_gripper, x_axis_brick)
 
-        return np.abs(dot_product > 0.9)
+        return np.abs(dot_product) > 0.9
 
     
     def choose_best_grip(grips):
         global_z = np.array([0, 0, 1])     
-        max_dot_product = -np.inf
-        most_upright_matrix = None
+        max_score = -np.inf
+        best_grip = None
 
         # First filter out grips with a dot product less than 0.1 (cases where gripper is parallel to table)
         filtered_grips = []
         for grip in grips:
             z_axis = grip[0][:3, 2]
             dot_product = np.dot(z_axis, global_z)
-            if dot_product >= 0.2:
+            if dot_product >= 0.4:
                 filtered_grips.append(grip)
 
-        # maybe dot product (at which angle is not necessary anymore like above)
         for grip in filtered_grips:
             z_axis = grip[0][:3, 2]
             z = grip[0][2][3]
-            dot_product = np.dot(z_axis, global_z) 
+            score = np.dot(z_axis, global_z) / 2
             is_center_grip = grip[2]
+            is_wide_grip = grip[1]
+            grips_z_axis = grip[7]
             bonus = 0.1
-            dot_product = dot_product + z*10
+            score = score + z*15
             if is_center_grip:
-                dot_product = dot_product + bonus
-            if dot_product > max_dot_product:
-                max_dot_product = dot_product
-                most_upright_matrix = grip
+                score += bonus
+            if not is_wide_grip:
+                score += bonus
+            if grips_z_axis:
+                score -= bonus
+            if score > max_score:
+                max_score = score
+                best_grip = grip
 
-        return most_upright_matrix
+        return best_grip
     
     connection_mode = p.DIRECT
     cid = p.connect(connection_mode)
 
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
-    plane_id = p.loadURDF("plane.urdf", basePosition=[0, 0, -0.025])
+    plane_id = p.loadURDF("plane.urdf", basePosition=[0, 0, -0.01])
 
     ### BRICKS ###
 
@@ -308,6 +327,10 @@ def get_gripping_points(T_base2bricks):
                         translation, quaternion = maxtrix_to_translation_quaternion(T_base2gripper)
                         p.resetBasePositionAndOrientation(gripper_id, translation, quaternion)
 
+                        fingertip_1 = p.getLinkState(gripper_id, 0)
+                        fingertip_2 = p.getLinkState(gripper_id, 1)
+                        grips_z_axis = grips_along_z_axis(fingertip_1, fingertip_2, T_base2brick)
+
                         for _ in range(10):
                             p.stepSimulation()
                         
@@ -323,7 +346,7 @@ def get_gripping_points(T_base2bricks):
                                 break
                         
                         if not collision:
-                            collision_free.append([T_base2gripper, False, True, brick, id, False])    
+                            collision_free.append([T_base2gripper, False, True, brick, id, False, T_base2brick, grips_z_axis, 0])    
 
         wide_grip = False
         center_grip = True                
@@ -350,7 +373,8 @@ def get_gripping_points(T_base2bricks):
                         else:
                             collision_check_links = [0, 1, 2, 3, 8, 9]
                             wide_grip = False
-
+                        
+                        final_x_offset = 0
                         if not wide_grip: 
                             offsets = [0.02, -0.04, 0.02]
                             x_axis_base2brick = T_base2brick[:3, 0]
@@ -364,6 +388,7 @@ def get_gripping_points(T_base2bricks):
                                 p.resetBasePositionAndOrientation(gripper_id, translation, quaternion)
 
                                 brick_is_upright = z_axis_gripper_matches_x_axis_brick(body, T_base2brick)
+                                grips_z_axis = grips_along_z_axis(fingertip_1, fingertip_2, T_base2brick)
 
                                 for _ in range(10):
                                     p.stepSimulation()
@@ -383,7 +408,14 @@ def get_gripping_points(T_base2bricks):
                                 
                                 if not collision: 
                                     center_grip = (i == 2)
-                                    collision_free.append([T_base2gripper, wide_grip, center_grip, brick, id, brick_is_upright])
+                                    if not grips_z_axis and not brick_is_upright:
+                                        translation_T1 = T_base2brick[:3, 3]
+                                        translation_T2 = T_base2gripper[:3, 3]
+                                        x_axis_T2 = T_base2gripper[:3, 0]
+                                        translation_difference = translation_T2 - translation_T1
+                                        final_x_offset = np.dot(translation_difference, x_axis_T2)
+                                    collision_free.append([T_base2gripper, wide_grip, center_grip, brick, id, brick_is_upright, T_base2brick, grips_z_axis, final_x_offset])
+                                    final_x_offset = 0
                         else:
                             for _ in range(10):
                                 p.stepSimulation()
@@ -402,7 +434,7 @@ def get_gripping_points(T_base2bricks):
                                     break
                             
                             if not collision:
-                                collision_free.append([T_base2gripper, wide_grip, center_grip, brick, id, False])
+                                collision_free.append([T_base2gripper, wide_grip, center_grip, brick, id, False, T_base2brick, grips_z_axis, final_x_offset])
                         
                         center_grip = True
 
@@ -417,5 +449,5 @@ def get_gripping_points(T_base2bricks):
 
     p.disconnect(cid)
 
-    # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask], id, brick_is_upright]]
+    # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
     return grip

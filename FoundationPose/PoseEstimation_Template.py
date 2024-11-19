@@ -4,11 +4,6 @@ from estimater import *
 from datareader import *
 import pyrealsense2 as rs
 from ultralytics import YOLO
-from deoxys import config_root
-from deoxys.franka_interface import FrankaInterface
-import roboticstoolbox as rtb
-from deoxys.utils.config_utils import get_default_controller_config
-from deoxys.experimental.motion_utils import reset_joints_to
 
 class PoseEstimatorApp:
     def __init__(self):
@@ -24,7 +19,7 @@ class PoseEstimatorApp:
         self.refiner = PoseRefinePredictor()
         self.glctx = dr.RasterizeCudaContext()
         self.reader = YcbineoatReader(video_dir=self.test_scene_dir, shorter_side=None, zfar=np.inf)
-        self.maskModel = YOLO('/home/mrenz/runs/segment/train15/weights/best.pt')
+        self.maskModel = YOLO('/home/panda3/Desktop/Robot_BA/best.pt')
         self.track = False
         self.start_estimate = False
 

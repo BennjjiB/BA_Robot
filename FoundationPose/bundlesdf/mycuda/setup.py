@@ -33,7 +33,7 @@ setup(
         ],extra_compile_args={'gcc': c_flags, 'nvcc': nvcc_flags}),
     ],
     include_dirs=[
-        "/home/mrenz/ws/root/include/eigen3",
+        "/home/panda3/ws/root/include/eigen3",
     ],
     cmdclass={
         'build_ext': BuildExtension

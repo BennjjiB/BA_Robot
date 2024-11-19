@@ -12,7 +12,7 @@ def main():
     config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
     pipeline.start(config)
 
-    model = YOLO('/home/mrenz/runs/segment/train22/weights/best.pt')
+    model = YOLO('/home/panda3/Desktop/Robot_BA/best.pt')
 
     while True:
         frames = pipeline.wait_for_frames()
