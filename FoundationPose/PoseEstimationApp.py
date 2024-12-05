@@ -1,5 +1,4 @@
 from RealSenseReader import *
-from helper_functions import *
 import cv2
 import numpy as np
 from estimater import *
@@ -24,7 +23,7 @@ class PoseEstimatorApp:
             config_root + "/charmander.yml", use_visualizer=False)
         self.glctx = dr.RasterizeCudaContext()
         self.reader = RealSenseReader()
-        
+
         # Reset and init all offsets
         self.reset_estimation()
         self.sort_by_color = sort_by_color
