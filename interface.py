@@ -1,16 +1,21 @@
 import gradio as gr
 from gradio import ChatMessage
 
+from foundation_pose.PoseEstimationApp import PoseEstimatorApp
 from foundation_pose.real_sense_reader import RealSenseReader
 from client import Client
 from transcriber import Transcriber
 import numpy as np
+from ultralytics import YOLO
 
 BASE_URL = "http://134.2.17.204:5000"
 # BASE_URL = "http://127.0.0.1:5000"
 client = Client(BASE_URL, None)
 transcriber = Transcriber()
 webcam = RealSenseReader()
+maskModel = YOLO('/home/panda3/Desktop/Robot_BA/best.pt')
+robotInterface = PoseEstimatorApp(reader=webcam, maskModel=maskModel)
+
 
 def interact_with_pandabot(prompt, messages):
     messages = messages if messages else []
@@ -55,19 +60,51 @@ def clear_all():
     client.clear_history()
     return "", []
 
+
 def get_images():
     color_image, depth_image, depth_colormap = webcam.capture_image()
-    # flip images and adjust color bgr to rgb
-    color_image = color_image[:, ::-1]
-    color_image = color_image[...,::-1]
-    
-    depth_image = np.clip(depth_image, -1, 1)
-    depth_image = depth_image[:, ::-1]
-    depth_image = depth_image[...,::-1]
+    registered_bricks = maskModel(color_image, iou=0.9, verbose=False)[0]
+    annotated_frame = registered_bricks.plot()
+    og_color_image = color_image.copy()
+    og_depth_image = depth_image.copy()
+    # adjust color bgr to rgb
+    color_image = color_image[..., ::-1]
 
-    depth_colormap = depth_colormap[:, ::-1]
-    depth_colormap = depth_colormap[...,::-1]
-    return color_image, depth_image, depth_colormap, None
+    depth_image = np.clip(depth_image, -1, 1)
+    depth_image = depth_image[..., ::-1]
+
+    depth_colormap = depth_colormap[..., ::-1]
+
+    annotated_frame = annotated_frame[..., ::-1]
+    
+    return color_image, depth_image, depth_colormap, annotated_frame, (og_color_image, og_depth_image), registered_bricks
+
+    # if not registered_bricks:
+    #     self.start_estimate = False
+    #     self.offset_red = 0
+    #     self.offset_orange = 0
+    #     self.offset_yellow = 0
+    #     self.offset_green = 0
+    #     self.offset_blue = 0
+    #     self.offset_left = 0
+    #     self.offset_right = 0
+    # else:
+    #     bricks = self.get_brick_poses(
+    #         registered_bricks,
+    #         registered_bricks.orig_img.shape,
+    #         color_image,
+    #         depth_image
+    #     )
+
+
+def get_3d_image(images, registered_bricks):
+    bricks, image_3d = robotInterface.get_brick_poses(
+        registered_bricks,
+        registered_bricks.orig_img.shape,
+        images[0],
+        images[1]
+    )
+    return image_3d
 
 
 css = """
@@ -111,25 +148,15 @@ with gr.Blocks(title="Panda-Bot", css=css, fill_height=True, js=js_func) as demo
         streaming=True,
         type="numpy"
     )
-    with gr.Row():
-        clear = gr.Button("Clear", variant="secondary", size="lg")
-        submit_button = gr.Button("Submit", variant="primary", size="lg")
-
-
-    timer = gr.Timer(0.05)
-    with gr.Column():
-        with gr.Row():
-            default_image = gr.Image(label="image")
-            depth = gr.Image(label="depth image")
-        with gr.Row():
-            color_map = gr.Image(label="depth color map")
-            yolo_image = gr.Image(label="yolo annotation")
-    timer.tick(get_images, None, [default_image, depth, color_map, yolo_image])
     input_audio.stream(
         fn=capture_audio,
         inputs=[input_audio, text_input, chatbot],
         outputs=[text_input, chatbot]
     )
+
+    with gr.Row():
+        clear = gr.Button("Clear", variant="secondary", size="lg")
+        submit_button = gr.Button("Submit", variant="primary", size="lg")
 
     submit_button.click(
         fn=interact_with_pandabot,
@@ -139,5 +166,32 @@ with gr.Blocks(title="Panda-Bot", css=css, fill_height=True, js=js_func) as demo
     text_input.submit(interact_with_pandabot, [
                       text_input, chatbot], [text_input, chatbot])
     clear.click(fn=clear_all, inputs=[], outputs=[text_input, chatbot])
+
+    # Webcam images
+    timer = gr.Timer(0.05)
+    with gr.Column():
+        with gr.Row():
+            default_image = gr.Image(label="image")
+            depth = gr.Image(label="depth image")
+        with gr.Row():
+            color_map = gr.Image(label="depth color map")
+            yolo_image = gr.Image(label="yolo annotation")
+        image_3d = gr.Image(label="3D image")
+
+    images = gr.State()
+    registered_bricks = gr.State()
+    timer.tick(get_images, None, [
+               default_image, depth, color_map, yolo_image, images, registered_bricks])
+
+    with gr.Row():
+        sortColorButton = gr.Button(
+            "Sort by color", variant="huggingface", size="lg")
+        sortSizeButton = gr.Button(
+            "Sort by size", variant="huggingface", size="lg")
+
+    sortColorButton.click(lambda: gr.Timer(active=False), None, timer).then(fn=get_3d_image, inputs=[
+                          images, registered_bricks], outputs=[image_3d])
+
+    sortSizeButton.click(fn=lambda: True, inputs=[], outputs=[])
 
 demo.launch()

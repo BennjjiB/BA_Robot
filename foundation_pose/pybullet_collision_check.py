@@ -2,7 +2,6 @@ import pybullet as p
 import math
 import numpy as np
 import pybullet_data
-import time
 
 def get_gripping_points(T_base2bricks): 
 

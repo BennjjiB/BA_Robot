@@ -1,7 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
-
+import atexit
 
 class RealSenseReader:
     def __init__(self):
@@ -10,7 +10,10 @@ class RealSenseReader:
         config = rs.config()
         config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
         config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
+
+
         self.pipeline.start(config)
+        atexit.register(self.cleanup)
         self.profile = self.pipeline.get_active_profile()
         self.depth_sensor = self.profile.get_device().first_depth_sensor()
         self.depth_sensor.set_option(rs.option.laser_power, 250)
@@ -24,12 +27,8 @@ class RealSenseReader:
 
         self.align = rs.align(rs.stream.color)
 
-    
-    def __del__(self):
-        try:
-            self.pipeline.stop()
-        except:
-            pass
+    def cleanup(self):
+        self.pipeline.stop()
 
     def capture_image(self):
         """
