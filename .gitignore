@@ -161,5 +161,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 best.pt
-FoundationPose/weights/2023-10-28-18-33-37/model_best.pth
-FoundationPose/weights/2024-01-11-20-02-45/model_best.pth
+foundation_pose/weights/
+brick_pile_generation/datasets/
