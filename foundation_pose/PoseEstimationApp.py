@@ -52,8 +52,7 @@ class PoseEstimatorApp:
 
         self.T_cam2gripper = np.load('foundation_pose/T_cam2gripper.npy')
 
-
-    def sort_brick(self, collsion_free_brick):
+    def sort_brick(self, collsion_free_brick, sort_by_color: bool):
         T_base2object = collsion_free_brick[0]
         wide_grip = collsion_free_brick[1]
         color = collsion_free_brick[3][2]
@@ -152,7 +151,7 @@ class PoseEstimatorApp:
                     break
 
             if not has_failed:
-                if self.sort_by_color:
+                if sort_by_color:
                     if brick_is_upright:
                         dist_to_center = self.__compute_transformation_distance(
                             T_base2object, original_pose)
@@ -320,12 +319,12 @@ class PoseEstimatorApp:
 
         return bricks, image_3d
 
-    def start_sort_pipeline(self, registered_bricks, bricks):
+    def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
         ssim_score = 1
         detections_coherent = True
         bricks_before = registered_bricks.boxes.cls
 
-        while (ssim_score > 0.994 and detections_coherent):
+        while (ssim_score > min_ssim_score and detections_coherent):
             image, _, _ = self.reader.capture_image()
 
             if not bricks:
@@ -338,7 +337,7 @@ class PoseEstimatorApp:
             index = collision_free_brick[4]
             del bricks[index]
 
-            has_failed = self.sort_brick(collision_free_brick)
+            has_failed = self.sort_brick(collision_free_brick, sort_by_color=sort_by_color)
             if has_failed:
                 break
 
@@ -350,15 +349,13 @@ class PoseEstimatorApp:
             ssim_score = compute_image_difference(
                 image, image_after_grip, mask)
             registered_bricks_after = self.maskModel(
-                image_after_grip, iou=0.9, conf=0.6)[0]
+                image_after_grip, iou=0.9, conf=0.6, verbose=False)[0]
             removed_brick = collision_free_brick[3][4].item()
             bricks_before = bricks_before.tolist()
             bricks_before.remove(removed_brick)
             bricks_before = torch.tensor(sorted(bricks_before))
-            bricks_after = torch.sort(
-                registered_bricks_after.boxes.cls).values
-            detections_coherent = torch.equal(
-                bricks_before, bricks_after)
+            bricks_after = torch.sort(registered_bricks_after.boxes.cls).values
+            detections_coherent = torch.equal(bricks_before, bricks_after)
         print("Finished sorting all bricks!")
 
     def __grasp(self, grasp):
