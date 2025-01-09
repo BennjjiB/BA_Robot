@@ -18,7 +18,6 @@ class PoseEstimatorApp:
         self.test_scene_dir = f'{self.code_dir}/out'
         self.debug_dir = f'{code_dir}/debug'
         self.maskModel = maskModel
-        self.start_estimate = False
         self.robot_interface = FrankaInterface(
             config_root + "/charmander.yml", use_visualizer=False)
         self.glctx = dr.RasterizeCudaContext()
@@ -34,8 +33,6 @@ class PoseEstimatorApp:
         # sets the sorting offset relative to the base sorting position for both sizes
         self.offset_left = 0
         self.offset_right = 0
-
-        self.sort_by_color = True
 
         self.mesh_4x2 = trimesh.load(f'{self.code_dir}/out/mesh/4x2_brick.obj')
         self.est4x2 = FoundationPose(model_pts=self.mesh_4x2.vertices, model_normals=self.mesh_4x2.vertex_normals,
@@ -55,91 +52,6 @@ class PoseEstimatorApp:
 
         self.T_cam2gripper = np.load('foundation_pose/T_cam2gripper.npy')
 
-    def on_mouse(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            button_est_x, button_est_y = (20, 20)
-            button_switch_x, button_switch_y = (20, 80)
-            button_width, button_height = (150, 50)
-            if button_est_x < x < button_est_x + button_width and button_est_y < y < button_est_y + button_height:
-                self.start_estimate = True
-            if button_switch_x < x < button_switch_x + button_width and button_switch_y < y < button_switch_y + button_height:
-                self.sort_by_color = not self.sort_by_color
-
-    def draw_button(self, img, text, width, y):
-        text_color = (255, 255, 255)
-        button_color = (0, 0, 0)
-        button_text = text
-        button_x, button_y = (20, y)
-        button_width, button_height = (width, 50)
-        cv2.rectangle(img, (button_x, button_y), (button_x +
-                      button_width, button_y + button_height), button_color, -1)
-        cv2.putText(img, button_text, (button_x + 10, button_y +
-                    button_height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-
-    def draw_image_grid(self, image1, image2, image3, image4, draw_button):
-        images_top = np.hstack((image1, image2))
-        images_bottom = np.hstack((image3, image4))
-        images = np.vstack((images_top, images_bottom))
-        if draw_button:
-            self.draw_button(images, "Estimate pose", 150, 20)
-            if self.sort_by_color:
-                self.draw_button(images, "Sorting by color", 150, 80)
-            else:
-                self.draw_button(images, "Sorting by size", 150, 80)
-        cv2.imshow('Estimating poses ...', images)
-        cv2.waitKey(25)
-
-    def grasp(self, grasp):
-        self.robot_interface.control(
-            controller_type="CARTESIAN_VELOCITY",
-            action=[0.0]*6 + [grasp],
-            controller_cfg=get_default_controller_config("CARTESIAN_VELOCITY")
-        )
-
-    # lets gripper move in straight line
-    def move_last_bit(self, scale_x, scale_y, scale_z, gripper_open):
-        has_failed = False
-
-        dt = 0.05
-        T = 4.5
-        N = int(T / dt)
-
-        v_max_x = (2 * scale_x) / T
-        v_max_y = (2 * scale_y) / T
-        v_max_z = (2 * scale_z) / T
-
-        t_array = np.linspace(0, T, N+1)
-
-        for t in t_array:
-            vx = v_max_x * (1 - np.cos(2 * np.pi * t / T)) / 2
-            vy = v_max_y * (1 - np.cos(2 * np.pi * t / T)) / 2
-            vz = v_max_z * (1 - np.cos(2 * np.pi * t / T)) / 2
-
-            action = [vx, vy, vz, 0, 0, 0, gripper_open]
-
-            self.robot_interface.control(
-                controller_type="CARTESIAN_VELOCITY",
-                action=action,
-                controller_cfg=get_default_controller_config(
-                    "CARTESIAN_VELOCITY"),
-            )
-
-            if self.robot_interface.last_gripper_q < 0.001:
-                has_failed = True
-                break
-
-            time.sleep(0.05)
-
-        return has_failed
-
-    # computes distances between the translation vectors of two transformation matrices
-    def compute_transformation_distance(self, T1, T2):
-        t1 = T1[:3, 3]
-        t2 = T2[:3, 3]
-
-        translation_distance = np.linalg.norm(t1 - t2)
-
-        return translation_distance
 
     def sort_brick(self, collsion_free_brick):
         T_base2object = collsion_free_brick[0]
@@ -215,7 +127,7 @@ class PoseEstimatorApp:
             target_pos_up = current_pos.flatten() - 0.5 * diff
             distance = np.linalg.norm(diff)
             while distance > 0.01:
-                has_failed = self.move_last_bit(
+                has_failed = self.__move_last_bit(
                     diff[0], diff[1], diff[2], -grip_width)
                 _, current_pos = self.robot_interface.last_eef_rot_and_pos
                 diff = translation_vector_target.flatten() - current_pos.flatten()
@@ -223,7 +135,7 @@ class PoseEstimatorApp:
                 if has_failed:
                     break
 
-            self.grasp(grip_width)
+            self.__grasp(grip_width)
             time.sleep(0.3)
 
             # move straight up from brick
@@ -231,7 +143,7 @@ class PoseEstimatorApp:
             diff = target_pos_up - current_pos.flatten()
             distance = np.linalg.norm(diff)
             while distance > 0.01:
-                has_failed = self.move_last_bit(
+                has_failed = self.__move_last_bit(
                     diff[0], diff[1], diff[2], grip_width)
                 _, current_pos = self.robot_interface.last_eef_rot_and_pos
                 diff = target_pos_up - current_pos.flatten()
@@ -242,7 +154,7 @@ class PoseEstimatorApp:
             if not has_failed:
                 if self.sort_by_color:
                     if brick_is_upright:
-                        dist_to_center = self.compute_transformation_distance(
+                        dist_to_center = self.__compute_transformation_distance(
                             T_base2object, original_pose)
                         if color == "green" or color == "blue":
                             dist_to_center += 0.012
@@ -292,7 +204,7 @@ class PoseEstimatorApp:
                     sort_pose = sorting_pose_left_color if color == "blue" or color == "green" else sorting_pose_right_color
                 else:
                     if brick_is_upright:
-                        dist_to_center = self.compute_transformation_distance(
+                        dist_to_center = self.__compute_transformation_distance(
                             T_base2object, original_pose)
                         dist_to_center += 0.012
                         sorting_pose_left_size[2][3] += dist_to_center
@@ -326,7 +238,7 @@ class PoseEstimatorApp:
                 diff = target_pos - current_pos.flatten()
                 distance = np.linalg.norm(diff)
                 while distance > 0.01:
-                    self.move_last_bit(diff[0], diff[1], diff[2], grip_width)
+                    self.__move_last_bit(diff[0], diff[1], diff[2], grip_width)
                     _, current_pos = self.robot_interface.last_eef_rot_and_pos
                     diff = target_pos - current_pos.flatten()
                     distance = np.linalg.norm(diff)
@@ -338,7 +250,7 @@ class PoseEstimatorApp:
                 distance = np.linalg.norm(diff)
                 open_grip = -0.9 if wide_grip else -0.7
                 while distance > 0.01:
-                    self.move_last_bit(diff[0], diff[1], diff[2], open_grip)
+                    self.__move_last_bit(diff[0], diff[1], diff[2], open_grip)
                     _, current_pos = self.robot_interface.last_eef_rot_and_pos
                     diff = target_pos - current_pos.flatten()
                     distance = np.linalg.norm(diff)
@@ -352,7 +264,7 @@ class PoseEstimatorApp:
 
         return has_failed
 
-    def get_brick_poses(self, registered_bricks, shape, color_image, depth_image):
+    def get_brick_poses(self, registered_bricks, color_image, depth_image):
         """
         Processes and visualizes 3D poses of registered bricks, extracting their sizes and colors from a mask model. The function computes the pose of each brick in camera coordinates, draws the 3D bounding boxes and axes, and transforms the poses into base-to-gripper coordinates. The results are appended to a list of bricks along with their visualizations.
 
@@ -362,7 +274,7 @@ class PoseEstimatorApp:
         """
         bricks = []
 
-        h2, w2, _ = shape
+        h2, w2, _ = registered_bricks.orig_img.shape,
 
         T_base2gripper = None
         while T_base2gripper is None:
@@ -448,4 +360,55 @@ class PoseEstimatorApp:
             detections_coherent = torch.equal(
                 bricks_before, bricks_after)
         print("Finished sorting all bricks!")
-            
+
+    def __grasp(self, grasp):
+        self.robot_interface.control(
+            controller_type="CARTESIAN_VELOCITY",
+            action=[0.0]*6 + [grasp],
+            controller_cfg=get_default_controller_config("CARTESIAN_VELOCITY")
+        )
+
+    # lets gripper move in straight line
+    def __move_last_bit(self, scale_x, scale_y, scale_z, gripper_open):
+        has_failed = False
+
+        dt = 0.05
+        T = 4.5
+        N = int(T / dt)
+
+        v_max_x = (2 * scale_x) / T
+        v_max_y = (2 * scale_y) / T
+        v_max_z = (2 * scale_z) / T
+
+        t_array = np.linspace(0, T, N+1)
+
+        for t in t_array:
+            vx = v_max_x * (1 - np.cos(2 * np.pi * t / T)) / 2
+            vy = v_max_y * (1 - np.cos(2 * np.pi * t / T)) / 2
+            vz = v_max_z * (1 - np.cos(2 * np.pi * t / T)) / 2
+
+            action = [vx, vy, vz, 0, 0, 0, gripper_open]
+
+            self.robot_interface.control(
+                controller_type="CARTESIAN_VELOCITY",
+                action=action,
+                controller_cfg=get_default_controller_config(
+                    "CARTESIAN_VELOCITY"),
+            )
+
+            if self.robot_interface.last_gripper_q < 0.001:
+                has_failed = True
+                break
+
+            time.sleep(0.05)
+
+        return has_failed
+
+    # computes distances between the translation vectors of two transformation matrices
+    def __compute_transformation_distance(self, T1, T2):
+        t1 = T1[:3, 3]
+        t2 = T2[:3, 3]
+
+        translation_distance = np.linalg.norm(t1 - t2)
+
+        return translation_distance
