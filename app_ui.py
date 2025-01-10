@@ -3,13 +3,11 @@ import chatbot_ui
 from client import Client
 from robot_interface import RobotInterface
 import robot_ui
-from transcriber import Transcriber
 
 BASE_URL = "http://134.2.17.204:5000"
 # BASE_URL = "http://127.0.0.1:5000"
 client = Client(BASE_URL, None)
-transcriber = Transcriber()
-robot_interface = RobotInterface()
+#robot_interface = RobotInterface()
 
 
 css = """
@@ -29,9 +27,9 @@ function refresh() {
 }
 """
 with gr.Blocks(title="Panda-Bot", css=css, fill_height=True, js=js_func) as demo:
-    chatbot_ui.chatbot_ui(transcriber, client)
-    with gr.Accordion(label="Robot Controls", visible=True):
-        robot_ui.robot_ui(robot_interface)
+    chatbot_ui.chatbot_ui(client)
+    # with gr.Accordion(label="Robot Controls", visible=True):
+    #     robot_ui.robot_ui(robot_interface)
 
 
 demo.launch(favicon_path="panda_avatar.png")

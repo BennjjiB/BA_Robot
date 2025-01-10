@@ -2,10 +2,8 @@ import gradio as gr
 from gradio import ChatMessage
 from client import Client
 from robot_interface import RobotInterface
-from transcriber import Transcriber
 
-
-def chatbot_ui(transcriber: Transcriber, client: Client):
+def chatbot_ui(client: Client):
     def interact_with_pandabot(prompt, messages):
         messages = messages if messages else []
         messages.append(ChatMessage(role="user", content=prompt))
@@ -32,11 +30,9 @@ def chatbot_ui(transcriber: Transcriber, client: Client):
                 messages.append(ChatMessage(role="assistant", content=""))
             yield "", messages
 
-    def capture_audio(new_chunk, transcript, messages):
-        yield gr.skip(), gr.skip()
+    def capture_audio(new_chunk, messages):
         if new_chunk:
-            new_transcript, start_prompt = transcriber.transcribe_audio(
-                new_chunk, transcript)
+            new_transcript, start_prompt = client.send_audio(new_chunk[1], new_chunk[0])
             if start_prompt:
                 yield from interact_with_pandabot(new_transcript, messages)
             elif new_transcript:
@@ -44,7 +40,6 @@ def chatbot_ui(transcriber: Transcriber, client: Client):
         yield gr.skip(), gr.skip()
 
     def clear_all():
-        transcriber.reset()
         client.clear_history()
         return "", []
 
@@ -74,7 +69,7 @@ def chatbot_ui(transcriber: Transcriber, client: Client):
     )
     input_audio.stream(
         fn=capture_audio,
-        inputs=[input_audio, text_input, chatbot],
+        inputs=[input_audio, chatbot],
         outputs=[text_input, chatbot]
     )
 

@@ -2,12 +2,13 @@ import requests
 import queue
 from status_helper import status_queue
 from tool_service import ToolService, check_if_tool_call
-
+import numpy as np
+import base64
+import json
 
 class Client:
-    def __init__(self, base_url: str, transcriber, tool_service: ToolService = ToolService()) -> None:
+    def __init__(self, base_url: str, tool_service: ToolService = ToolService()) -> None:
         self.base_url = base_url
-        self.transcriber = transcriber
         self.tool_service = tool_service
 
     def clear_history(self):
@@ -31,6 +32,18 @@ class Client:
             for chunk in response.iter_content():
                 r = chunk.decode(errors='replace')
                 yield r
+    
+    def send_audio(self, audio_data, sample_rate):
+        payload = {
+            'audio_data': audio_data.tolist(),
+            'sample_rate': sample_rate
+        }
+        endpoint = f"{self.base_url}/transcribe"
+        response = requests.post(endpoint, json=payload).json()
+        return response.get('transcription'), response.get('sendPrompt')
+
+    def stream_transcription(self, transcript):
+        self.transcript = transcript
 
     def handle_response(self, response):
         generated_response = ""
@@ -58,17 +71,3 @@ class Client:
                     break
                 continue
         print("All threads are finished and the queue is empty. Exiting.")
-
-    def start_chat_interface(self, voice=True):
-        if voice:
-            while True:
-                transcription = self.transcriber.start_transcription(
-                    record_timeout=1, phrase_timeout=1.5, speak_timeout=3)
-                prompt = "".join(transcription)
-                print("\n-------------Generating response-------------\n")
-                self.send_prompt(prompt)
-        else:
-            while True:
-                prompt = input('Ask a question: ')
-                print("\n-------------Generating response-------------\n")
-                self.handle_response(self.send_prompt(prompt))
