@@ -1,12 +1,14 @@
 import json
 import threading
-from tool_definitions import available_tools
 import re
+from robot_interface import RobotInterface
 
 
 class ToolService():
-    def __init__(self, available_tools=available_tools):
-        self.available_tools = available_tools
+    def __init__(self, robot_interface: RobotInterface):
+        self.available_tools = {
+            "sort_all_bricks": robot_interface.sort_bricks
+        }
 
     def parse_and_execute_response(self, tools):
         parsed_tools = self.parse_tools(tools)
@@ -24,14 +26,16 @@ class ToolService():
         return threads, parsed_tools
 
     def start_tool_call(self, function_to_call, function_args):
-        thread = threading.Thread(target=function_to_call, args=(function_args,))
+        thread = threading.Thread(
+            target=function_to_call, args=(function_args,))
         thread.start()
         return thread
 
     def parse_tools(self, tools):
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
         tool_call_match = re.findall(tool_call_pattern, tools, re.DOTALL)
-        tool_calls = [convert_recursively(match.strip()) for match in tool_call_match]
+        tool_calls = [convert_recursively(match.strip())
+                      for match in tool_call_match]
         return tool_calls
 
     def get_tool_response_template(self, tool_response):

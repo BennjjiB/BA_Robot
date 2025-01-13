@@ -52,6 +52,11 @@ class PoseEstimatorApp:
 
         self.T_cam2gripper = np.load('foundation_pose/T_cam2gripper.npy')
 
+        self.stop = False
+    
+    def stop(self):
+        self.stop = True
+
     def sort_brick(self, collsion_free_brick, sort_by_color: bool):
         T_base2object = collsion_free_brick[0]
         wide_grip = collsion_free_brick[1]
@@ -318,8 +323,18 @@ class PoseEstimatorApp:
             bricks.append([center_pose, size, color, mask, brick_class_id])
 
         return bricks, image_3d
+    
+
+    def get_collision_free_bricks(self, bricks):
+        # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
+        collision_free_brick, all_collision_free_bricks = get_gripping_points(bricks)
+        print(all_collision_free_bricks)
+        print(len(all_collision_free_bricks))
+        all_collision_free_bricks = [brick[3] for brick in all_collision_free_bricks]
+        return
 
     def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
+        self.stop = False
         self.offset_red = 0
         self.offset_orange = 0
         self.offset_yellow = 0
@@ -331,7 +346,7 @@ class PoseEstimatorApp:
         detections_coherent = True
         bricks_before = registered_bricks.boxes.cls
 
-        while (ssim_score > min_ssim_score and detections_coherent):
+        while (ssim_score > min_ssim_score and detections_coherent and not self.stop):
             image, _, _ = self.reader.capture_image()
             if not bricks:
                 break
@@ -352,8 +367,10 @@ class PoseEstimatorApp:
                 image_after_grip, _, _ = self.reader.capture_image()
 
             mask = collision_free_brick[3][3]
+            print(image_after_grip)
             ssim_score = compute_image_difference(
                 image, image_after_grip, mask)
+            print("SSim score:", ssim_score)
             registered_bricks_after = self.maskModel(
                 image_after_grip, iou=0.9, conf=0.6, verbose=False)[0]
             removed_brick = collision_free_brick[3][4].item()
@@ -362,6 +379,7 @@ class PoseEstimatorApp:
             bricks_before = torch.tensor(sorted(bricks_before))
             bricks_after = torch.sort(registered_bricks_after.boxes.cls).values
             detections_coherent = torch.equal(bricks_before, bricks_after)
+        self.stop = False
         print("Finished sorting all bricks!")
 
     def __grasp(self, grasp):
