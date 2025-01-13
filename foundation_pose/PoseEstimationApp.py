@@ -320,6 +320,13 @@ class PoseEstimatorApp:
         return bricks, image_3d
 
     def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
+        self.offset_red = 0
+        self.offset_orange = 0
+        self.offset_yellow = 0
+        self.offset_green = 0
+        self.offset_blue = 0
+        self.offset_left = 0
+        self.offset_right = 0
         ssim_score = 1
         detections_coherent = True
         bricks_before = registered_bricks.boxes.cls
@@ -329,13 +336,12 @@ class PoseEstimatorApp:
             if not bricks:
                 break
 
-            collision_free_brick = get_gripping_points(bricks)
+            collision_free_brick, _ = get_gripping_points(bricks)
             if not collision_free_brick:
                 break
 
             index = collision_free_brick[4]
             del bricks[index]
-            print("Will start sorting", index)
             has_failed = self.sort_brick(
                 collision_free_brick, sort_by_color=sort_by_color)
             if has_failed:

@@ -449,4 +449,4 @@ def get_gripping_points(T_base2bricks):
     p.disconnect(cid)
 
     # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
-    return grip
+    return grip, collision_free
