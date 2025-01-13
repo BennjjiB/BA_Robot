@@ -40,13 +40,16 @@ def robot_ui(robot_interface: RobotInterface):
             pass
 
     sort_option = gr.Dropdown(value="color", choices=["color", "size"], label="Sort by:",
-                info="Please select the sorting criteria", show_label=True)
+                              info="Please select the sorting criteria", show_label=True)
 
     def start_sorting(option: str):
-        #robot_interface.sort_bricks(by_color=option == "color")
-        return False, None, gr.Button(
+        registered_bricks, bricks, image = robot_interface.get_3d_bricks_and_image()
+        yield False, image, gr.Button(
             "Stop sorting", variant="stop", size="lg")
+        robot_interface.sort_bricks(
+            registered_bricks, bricks, by_color=option == "color")
 
     sort_button = gr.Button(
         "Start sorting", variant="primary", size="lg")
-    sort_button.click(fn=start_sorting, inputs=sort_option, outputs=[show_webcam, image_3d, sort_button])
+    sort_button.click(fn=start_sorting, inputs=sort_option,
+                      outputs=[show_webcam, image_3d, sort_button])

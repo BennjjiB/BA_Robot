@@ -273,7 +273,7 @@ class PoseEstimatorApp:
         """
         bricks = []
 
-        h2, w2, _ = registered_bricks.orig_img.shape,
+        h2, w2, _ = registered_bricks.orig_img.shape
 
         T_base2gripper = None
         while T_base2gripper is None:
@@ -326,7 +326,6 @@ class PoseEstimatorApp:
 
         while (ssim_score > min_ssim_score and detections_coherent):
             image, _, _ = self.reader.capture_image()
-
             if not bricks:
                 break
 
@@ -336,8 +335,9 @@ class PoseEstimatorApp:
 
             index = collision_free_brick[4]
             del bricks[index]
-
-            has_failed = self.sort_brick(collision_free_brick, sort_by_color=sort_by_color)
+            print("Will start sorting", index)
+            has_failed = self.sort_brick(
+                collision_free_brick, sort_by_color=sort_by_color)
             if has_failed:
                 break
 

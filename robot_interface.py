@@ -30,11 +30,10 @@ class RobotInterface:
             return None, None, None, None
 
     def get_3d_image(self):
-        _, _, image_3d = self.__get_3d_bricks_and_image()
+        _, _, image_3d = self.get_3d_bricks_and_image()
         return cv2.cvtColor(image_3d, cv2.COLOR_BGR2RGB)
 
-    def sort_bricks(self, by_color: bool = False):
-        registered_bricks, bricks, _ = self.get_3d___get_3d_bricks_and_image()
+    def sort_bricks(self, registered_bricks, bricks, by_color: bool = False):
         self.robot.start_sort_pipeline(registered_bricks, bricks, by_color)
 
     def __get_images_and_brick_poses(self):
@@ -44,7 +43,7 @@ class RobotInterface:
         annotated_frame = registered_bricks.plot()
         return color_image, depth_image, depth_colormap, annotated_frame, registered_bricks
 
-    def __get_3d_bricks_and_image(self):
+    def get_3d_bricks_and_image(self):
         color_image, depth_image, _, _, registered_bricks = self.__get_images_and_brick_poses()
         bricks, image_3d = self.robot.get_brick_poses(
             registered_bricks,
