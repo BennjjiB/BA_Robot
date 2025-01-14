@@ -16,7 +16,10 @@ class ToolService():
         if parsed_tools:
             for tool in parsed_tools:
                 function_name = tool["function_name"]
-                function_to_call = self.available_tools[function_name]
+                function_to_call = self.available_tools.get(function_name, None)
+                if function_to_call is None:
+                    print(function_to_call, " is not a defined function")
+                    return [], []
                 function_args = tool["arguments"]
                 if "id" in tool:
                     function_args["tool_id"] = tool["id"]
@@ -59,7 +62,7 @@ def convert_recursively(data):
             data = json.loads(data)
         except json.JSONDecodeError:
             pass
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         for key, value in data.items():
             data[key] = convert_recursively(value)
     elif isinstance(data, list):

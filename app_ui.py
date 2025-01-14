@@ -3,12 +3,14 @@ import chatbot_ui
 from client import Client
 from robot_interface import RobotInterface
 import robot_ui
+from tool_service import ToolService
 
 BASE_URL = "http://134.2.17.204:5000"
 # BASE_URL = "http://127.0.0.1:5000"
-client = Client(BASE_URL, None)
-robot_interface = RobotInterface()
 
+robot_interface = RobotInterface()
+tool_service = ToolService(robot_interface)
+client = Client(BASE_URL, tool_service)
 
 css = """
 .message.pending {

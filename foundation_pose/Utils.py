@@ -46,7 +46,6 @@ except:
 try:
   import mycpp.build.mycpp as mycpp
 except:
-  print("uuuups")
   mycpp = None
 try:
   from bundlesdf.mycuda import common

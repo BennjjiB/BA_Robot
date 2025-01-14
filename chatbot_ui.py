@@ -1,7 +1,6 @@
 import gradio as gr
 from gradio import ChatMessage
 from client import Client
-from robot_interface import RobotInterface
 
 def chatbot_ui(client: Client):
     def interact_with_pandabot(prompt, messages):
@@ -11,13 +10,10 @@ def chatbot_ui(client: Client):
         response = client.send_prompt(prompt)
         messages.append(ChatMessage(role="assistant", content=""))
         for chunk in client.handle_response(response):
-            if chunk.get("text"):
-                messages[-1] = ChatMessage(role="assistant",
-                                           content=chunk["text"])
-            elif chunk.get("finished"):
-                messages.append(ChatMessage(role="assistant", content=""))
+            if chunk.get("text").strip():
+                messages[-1] = ChatMessage(role="assistant", content=chunk.get("text"))
+                yield "", messages
             elif chunk.get("tool"):
-                messages.pop()
                 for tool in chunk["tool"]:
                     messages.append(
                         ChatMessage(
@@ -27,8 +23,9 @@ def chatbot_ui(client: Client):
                                 "title": f"🛠️ Used tool {tool['function_name']}"}
                         )
                     )
+                    yield "", messages
                 messages.append(ChatMessage(role="assistant", content=""))
-            yield "", messages
+
 
     def capture_audio(new_chunk, messages):
         if new_chunk:

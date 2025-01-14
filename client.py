@@ -7,7 +7,7 @@ import base64
 import json
 
 class Client:
-    def __init__(self, base_url: str, tool_service: ToolService = ToolService()) -> None:
+    def __init__(self, base_url: str, tool_service: ToolService) -> None:
         self.base_url = base_url
         self.tool_service = tool_service
 
@@ -49,10 +49,7 @@ class Client:
         generated_response = ""
         for r in response:
             generated_response += r
-            if not check_if_tool_call(generated_response):
-                yield {"text": generated_response}
-        if generated_response:
-            yield {"finished": True}
+            yield {"text": generated_response}
         tool_threads, parsed_tools = self.tool_service.parse_and_execute_response(generated_response)
         if tool_threads:
             yield {"tool": parsed_tools}

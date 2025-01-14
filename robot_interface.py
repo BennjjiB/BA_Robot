@@ -38,10 +38,17 @@ class RobotInterface:
         _, _, image_3d = self.get_3d_bricks_and_image()
         return cv2.cvtColor(image_3d, cv2.COLOR_BGR2RGB)
 
-    def sort_bricks(self, registered_bricks, bricks, by_color: bool = False):
+    def sort_bricks(self, by_color: bool = False):
+        if self.is_sorting:
+            return
         self.is_sorting = True
+        registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
         self.robot.start_sort_pipeline(registered_bricks, bricks, by_color)
         self.is_sorting = False
+
+    def grab_brick(self, color: str):
+        self.get_collision_free_bricks()
+
 
     def __get_images_and_brick_poses(self):
         color_image, depth_image, depth_colormap = self.webcam.capture_image()
@@ -61,4 +68,8 @@ class RobotInterface:
 
     def get_collision_free_bricks(self):
         _, bricks, _ = self.get_3d_bricks_and_image()
-        self.robot.get_collision_free_bricks(bricks)
+        # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
+        collision_free_brick, all_collision_free_bricks = self.robot.get_collision_free_bricks(bricks)
+        print(all_collision_free_bricks)
+        print(len(all_collision_free_bricks))
+        all_collision_free_bricks = [brick[3] for brick in all_collision_free_bricks]

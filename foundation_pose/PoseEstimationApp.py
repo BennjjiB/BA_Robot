@@ -327,11 +327,7 @@ class PoseEstimatorApp:
 
     def get_collision_free_bricks(self, bricks):
         # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
-        collision_free_brick, all_collision_free_bricks = get_gripping_points(bricks)
-        print(all_collision_free_bricks)
-        print(len(all_collision_free_bricks))
-        all_collision_free_bricks = [brick[3] for brick in all_collision_free_bricks]
-        return
+        return get_gripping_points(bricks)
 
     def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
         self.stop = False

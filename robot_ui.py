@@ -47,10 +47,8 @@ def robot_ui(robot_interface: RobotInterface):
             robot_interface.stop_sorting()
             yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
         else:
-            registered_bricks, bricks, image = robot_interface.get_3d_bricks_and_image()
-            yield False, image, gr.Button("Stop sorting", variant="stop", size="lg")
-            robot_interface.sort_bricks(
-                registered_bricks, bricks, by_color=option == "color")
+            yield False, None, gr.Button("Stop sorting", variant="stop", size="lg")
+            robot_interface.sort_bricks(by_color=option == "color")
             yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
 
     sort_button = gr.Button(
