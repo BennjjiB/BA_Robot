@@ -113,7 +113,7 @@ class RobotInterface:
         _, bricks, _ = self.get_3d_bricks_and_image()
         size_and_colors = [(brick[1], brick[2])
                            for brick in bricks]
-        update_status("get_collision_free_bricks", str(size_and_colors))
+        update_status("get_all_bricks", str(size_and_colors))
 
     def get_collision_free_bricks(self):
         _, bricks, _ = self.get_3d_bricks_and_image()
