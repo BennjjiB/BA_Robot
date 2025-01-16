@@ -17,10 +17,6 @@ class RobotInterface:
         self.is_sorting = False
         self.old_3d = (None, None, None, None)
 
-    def stop_sorting(self):
-        self.robot.stop()
-        self.is_sorting = False
-
     def get_images(self):
         try:
             color_image, depth_image, depth_colormap, annotated_frame, _ = self.__get_images_and_brick_poses()

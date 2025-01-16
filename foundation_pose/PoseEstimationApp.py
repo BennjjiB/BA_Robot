@@ -53,11 +53,6 @@ class PoseEstimatorApp:
 
         self.T_cam2gripper = np.load('foundation_pose/T_cam2gripper.npy')
 
-        self.stop = False
-    
-    def stop(self):
-        self.stop = True
-
     def sort_brick(self, collsion_free_brick, sort_by_color: bool):
         T_base2object = collsion_free_brick[0]
         wide_grip = collsion_free_brick[1]
@@ -390,7 +385,6 @@ class PoseEstimatorApp:
             detections_coherent = torch.equal(bricks_before, bricks_after)
         if len(registered_bricks_after) > 0:
             return "pending"
-        self.stop = False
         update_status("sort_all_bricks", f"Success: Sorted all bricks.")
         return "finished"
 
