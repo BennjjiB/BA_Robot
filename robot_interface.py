@@ -92,7 +92,7 @@ class RobotInterface:
             score = compute_image_difference_without_mask(
                 self.old_3d[0], color_image)
         if score > 0.994:
-            return old_image, old_registered_bricks, old_bricks, old_image_3d
+            return old_registered_bricks, old_bricks, old_image_3d
         else:
             bricks, image_3d = self.robot.get_brick_poses(
                 registered_bricks,
