@@ -95,41 +95,6 @@ def get_gripping_points(T_base2bricks):
         dot_product = np.dot(z_axis_gripper, x_axis_brick)
 
         return np.abs(dot_product) > 0.9
-
-    
-    def choose_best_grip(grips):
-        global_z = np.array([0, 0, 1])     
-        max_score = -np.inf
-        best_grip = None
-
-        # First filter out grips with a dot product less than 0.1 (cases where gripper is parallel to table)
-        filtered_grips = []
-        for grip in grips:
-            z_axis = grip[0][:3, 2]
-            dot_product = np.dot(z_axis, global_z)
-            if dot_product >= 0.4:
-                filtered_grips.append(grip)
-
-        for grip in filtered_grips:
-            z_axis = grip[0][:3, 2]
-            z = grip[0][2][3]
-            score = np.dot(z_axis, global_z) / 2
-            is_center_grip = grip[2]
-            is_wide_grip = grip[1]
-            grips_z_axis = grip[7]
-            bonus = 0.1
-            score = score + z*15
-            if is_center_grip:
-                score += bonus
-            if not is_wide_grip:
-                score += bonus
-            if grips_z_axis:
-                score -= bonus
-            if score > max_score:
-                max_score = score
-                best_grip = grip
-
-        return best_grip
     
     connection_mode = p.DIRECT
     cid = p.connect(connection_mode)
@@ -450,3 +415,38 @@ def get_gripping_points(T_base2bricks):
 
     # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
     return grip, collision_free
+
+
+def choose_best_grip(grips):
+        global_z = np.array([0, 0, 1])     
+        max_score = -np.inf
+        best_grip = None
+
+        # First filter out grips with a dot product less than 0.1 (cases where gripper is parallel to table)
+        filtered_grips = []
+        for grip in grips:
+            z_axis = grip[0][:3, 2]
+            dot_product = np.dot(z_axis, global_z)
+            if dot_product >= 0.4:
+                filtered_grips.append(grip)
+
+        for grip in filtered_grips:
+            z_axis = grip[0][:3, 2]
+            z = grip[0][2][3]
+            score = np.dot(z_axis, global_z) / 2
+            is_center_grip = grip[2]
+            is_wide_grip = grip[1]
+            grips_z_axis = grip[7]
+            bonus = 0.1
+            score = score + z*15
+            if is_center_grip:
+                score += bonus
+            if not is_wide_grip:
+                score += bonus
+            if grips_z_axis:
+                score -= bonus
+            if score > max_score:
+                max_score = score
+                best_grip = grip
+
+        return best_grip

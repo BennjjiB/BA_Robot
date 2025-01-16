@@ -58,4 +58,7 @@ def robot_ui(robot_interface: RobotInterface):
     
     test_but = gr.Button(
         "Test", variant="primary", size="lg")
-    test_but.click(fn=robot_interface.get_collision_free_bricks)
+    test_but.click(fn=robot_interface.display_collision_free_bricks)
+    grab_but = gr.Button(
+        "grab brick", variant="primary", size="lg")
+    grab_but.click(fn=robot_interface.grab_brick)

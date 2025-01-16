@@ -4,6 +4,8 @@ import numpy as np
 from ultralytics import YOLO
 import cv2
 
+from status_helper import update_status
+
 
 class RobotInterface:
     def __init__(self) -> None:
@@ -12,7 +14,7 @@ class RobotInterface:
         self.robot = PoseEstimatorApp(
             reader=self.webcam, maskModel=self.maskModel)
         self.is_sorting = False
-        
+
     def stop_sorting(self):
         self.robot.stop()
         self.is_sorting = False
@@ -23,9 +25,11 @@ class RobotInterface:
             # adjust color bgr to rgb
             color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
             # Normalize depth image to [0, 255] range for visualization
-            depth_image_normalized = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
+            depth_image_normalized = cv2.normalize(
+                depth_image, None, 0, 255, cv2.NORM_MINMAX)
             depth_image_uint8 = depth_image_normalized.astype(np.uint8)
-            depth_image_colored = cv2.applyColorMap(depth_image_uint8, cv2.COLORMAP_JET)  # Visualize depth with color
+            depth_image_colored = cv2.applyColorMap(
+                depth_image_uint8, cv2.COLORMAP_JET)  # Visualize depth with color
             depth_colormap = cv2.cvtColor(depth_colormap, cv2.COLOR_BGR2RGB)
             annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
@@ -46,9 +50,16 @@ class RobotInterface:
         self.robot.start_sort_pipeline(registered_bricks, bricks, by_color)
         self.is_sorting = False
 
-    def grab_brick(self, color: str):
-        self.get_collision_free_bricks()
-
+    def grab_brick(self, color: str = "blue"):
+        grips, free_bricks = self.get_collision_free_bricks()
+        color_index = -1
+        for id, brick in free_bricks.items():
+            # [T_base2brick, size, color, mask, brick_class_id]
+            if brick[2] == color:
+                color_index = id
+                break
+        best_grip = self.robot.get_best_grip(grips[color_index])
+        self.robot.sort_brick(best_grip, True)
 
     def __get_images_and_brick_poses(self):
         color_image, depth_image, depth_colormap = self.webcam.capture_image()
@@ -66,10 +77,16 @@ class RobotInterface:
         )
         return registered_bricks, bricks, image_3d
 
+    def display_collision_free_bricks(self):
+        # [T_base2brick, size, color, mask, brick_class_id]
+        _, free_bricks = self.get_collision_free_bricks()
+        size_and_colors = [(brick[1], brick[2])
+                           for brick in free_bricks.values()]
+        result = str(size_and_colors)
+        update_status("get_collision_free_bricks", result)
+
     def get_collision_free_bricks(self):
         _, bricks, _ = self.get_3d_bricks_and_image()
-        # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
-        collision_free_brick, all_collision_free_bricks = self.robot.get_collision_free_bricks(bricks)
-        print(all_collision_free_bricks)
-        print(len(all_collision_free_bricks))
-        all_collision_free_bricks = [brick[3] for brick in all_collision_free_bricks]
+        grips, free_bricks = self.robot.get_collision_free_bricks_and_grips(
+            bricks)
+        return grips, free_bricks

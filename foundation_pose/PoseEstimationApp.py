@@ -8,7 +8,7 @@ import roboticstoolbox as rtb
 from deoxys.utils.config_utils import get_default_controller_config
 from deoxys.experimental.motion_utils import reset_joints_to
 from foundation_pose.helper_functions import *
-from foundation_pose.pybullet_collision_check import get_gripping_points
+from foundation_pose.pybullet_collision_check import get_gripping_points, choose_best_grip
 from foundation_pose.real_sense_reader import *
 
 
@@ -325,9 +325,21 @@ class PoseEstimatorApp:
         return bricks, image_3d
     
 
-    def get_collision_free_bricks(self, bricks):
+    def get_collision_free_bricks_and_grips(self, bricks):
         # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
-        return get_gripping_points(bricks)
+        _, all_collision_free_grips = get_gripping_points(bricks)
+        brick_class_ids = [brick[4] for brick in bricks]
+        grips = {}
+        free_bricks = {}
+        for id in brick_class_ids:
+            grip_group = [grip for grip in all_collision_free_grips if grip[3][4] == id]
+            if grip_group:
+                grips[id] = grip_group
+                free_bricks[id] = grip_group[0][3]
+        return grips, free_bricks
+    
+    def get_best_grip(self, grips):
+        return choose_best_grip(grips)
 
     def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
         self.stop = False

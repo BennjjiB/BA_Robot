@@ -7,7 +7,8 @@ from robot_interface import RobotInterface
 class ToolService():
     def __init__(self, robot_interface: RobotInterface):
         self.available_tools = {
-            "sort_all_bricks": robot_interface.sort_bricks
+            "sort_all_bricks": robot_interface.sort_bricks,
+            "get_collision_free_bricks": robot_interface.display_collision_free_bricks
         }
 
     def parse_and_execute_response(self, tools):
