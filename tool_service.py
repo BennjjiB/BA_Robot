@@ -2,29 +2,36 @@ import json
 import threading
 import re
 from robot_interface import RobotInterface
+from mock_tools import mock_tools
 
 
 class ToolService():
-    def __init__(self, robot_interface: RobotInterface):
+    def __init__(self, robot_interface: RobotInterface, mock=False):
         self.available_tools = {
             "sort_all_bricks": robot_interface.sort_bricks,
             "get_collision_free_bricks": robot_interface.display_collision_free_bricks,
-            "grab_brick": robot_interface.grab_brick
+            "grab_brick": robot_interface.grab_brick,
+            "get_all_bricks": robot_interface.display_bricks
         }
+        if mock:
+            self.available_tools = mock_tools
 
     def parse_and_execute_response(self, tools):
         parsed_tools = self.parse_tools(tools)
         thread = None
         if parsed_tools:
             thread = threading.Thread(
-                target=self.start_tool_calls(), args=(parsed_tools)
+                target=self.start_tool_calls, args=(parsed_tools, )
             )
             thread.start()
         return thread, parsed_tools
 
     def start_tool_calls(self, parsed_tools):
         for tool in parsed_tools:
-            function_name = tool["function_name"]
+            function_name = tool.get("function_name", None)
+            if not function_name:
+                print(tool, " is not a correct.")
+                return
             function_to_call = self.available_tools.get(function_name, None)
             if function_to_call is None:
                 print(function_to_call, " is not a defined function")

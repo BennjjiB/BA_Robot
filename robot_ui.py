@@ -16,9 +16,9 @@ def robot_ui(robot_interface: RobotInterface):
         toggle_3d_image.click(fn=lambda: (False, robot_interface.get_3d_image(
         )), inputs=None, outputs=[show_webcam, image_3d])
 
-    @gr.render(inputs=[show_webcam, image_3d])
-    def webcam_view(show_webcam, image_3d):
-        if show_webcam and image_3d is None:
+    @gr.render(inputs=[show_webcam])
+    def webcam_view(show_webcam):
+        if show_webcam:
             timer = gr.Timer(0.05)
             with gr.Column():
                 with gr.Row():
@@ -55,10 +55,3 @@ def robot_ui(robot_interface: RobotInterface):
         "Start sorting", variant="primary", size="lg")
     sort_button.click(fn=start_sorting, inputs=sort_option,
                       outputs=[show_webcam, image_3d, sort_button])
-    
-    test_but = gr.Button(
-        "Test", variant="primary", size="lg")
-    test_but.click(fn=robot_interface.display_collision_free_bricks)
-    grab_but = gr.Button(
-        "grab brick", variant="primary", size="lg")
-    grab_but.click(fn=robot_interface.grab_brick)

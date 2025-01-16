@@ -1,4 +1,5 @@
 from foundation_pose.PoseEstimationApp import PoseEstimatorApp
+from foundation_pose.helper_functions import compute_image_difference_without_mask
 from foundation_pose.real_sense_reader import RealSenseReader
 import numpy as np
 from ultralytics import YOLO
@@ -14,6 +15,7 @@ class RobotInterface:
         self.robot = PoseEstimatorApp(
             reader=self.webcam, maskModel=self.maskModel)
         self.is_sorting = False
+        self.old_3d = (None, None, None, None)
 
     def stop_sorting(self):
         self.robot.stop()
@@ -44,6 +46,11 @@ class RobotInterface:
 
     def sort_bricks(self, by_color: bool = False):
         if self.is_sorting:
+            return
+        registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
+        if not bricks:
+            update_status("sort_all_bricks",
+                          f"Success: No bricks detected, nothing to do.")
             return
         self.is_sorting = True
         sort_status = "pending"
@@ -79,20 +86,33 @@ class RobotInterface:
 
     def get_3d_bricks_and_image(self):
         color_image, depth_image, _, _, registered_bricks = self.__get_images_and_brick_poses()
-        bricks, image_3d = self.robot.get_brick_poses(
-            registered_bricks,
-            color_image,
-            depth_image
-        )
-        return registered_bricks, bricks, image_3d
+        score = 0
+        if self.old_3d[0]:
+            score = compute_image_difference_without_mask(
+                self.old_3d[0], color_image)
+        if score > 0.994:
+            return self.old_3d
+        else:
+            bricks, image_3d = self.robot.get_brick_poses(
+                registered_bricks,
+                color_image,
+                depth_image
+            )
+            self.old_3d = (color_image, registered_bricks, bricks, image_3d)
+            return registered_bricks, bricks, image_3d
 
     def display_collision_free_bricks(self):
         # [T_base2brick, size, color, mask, brick_class_id]
         _, free_bricks = self.get_collision_free_bricks()
         size_and_colors = [(brick[1], brick[2])
                            for brick in free_bricks.values()]
-        result = str(size_and_colors)
-        update_status("get_collision_free_bricks", result)
+        update_status("get_collision_free_bricks", str(size_and_colors))
+
+    def display_bricks(self):
+        _, bricks, _ = self.get_3d_bricks_and_image()
+        size_and_colors = [(brick[1], brick[2])
+                           for brick in bricks]
+        update_status("get_collision_free_bricks", str(size_and_colors))
 
     def get_collision_free_bricks(self):
         _, bricks, _ = self.get_3d_bricks_and_image()

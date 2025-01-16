@@ -64,11 +64,12 @@ class Client:
         while thread.is_alive() or not status_queue.empty():
             try:
                 new_status = status_queue.get(timeout=1)
+                print(new_status)
                 response = self.send_prompt(
                     self.tool_service.get_tool_response_template(new_status), tool_response=True
                 )
                 yield from self.handle_response(response, is_tool_response=True)
             except queue.Empty:
-                if thread.is_alive():
+                if not thread.is_alive() and status_queue.empty():
                     break
                 continue

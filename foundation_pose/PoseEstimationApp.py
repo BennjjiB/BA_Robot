@@ -358,8 +358,7 @@ class PoseEstimatorApp:
         while (ssim_score > min_ssim_score and detections_coherent and not self.stop):
             image, _, _ = self.reader.capture_image()
             if not bricks:
-                update_status("sort_all_bricks", f"Success: No bricks detected, nothing to do.")
-                return "error"
+                return "finished"
 
             collision_free_brick, _ = get_gripping_points(bricks)
             if not collision_free_brick:
