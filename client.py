@@ -1,10 +1,7 @@
 import requests
 import queue
 from status_helper import status_queue
-from tool_service import ToolService, check_if_tool_call
-import numpy as np
-import base64
-import json
+from tool_service import ToolService
 
 
 class Client:

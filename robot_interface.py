@@ -87,11 +87,12 @@ class RobotInterface:
     def get_3d_bricks_and_image(self):
         color_image, depth_image, _, _, registered_bricks = self.__get_images_and_brick_poses()
         score = 0
-        if self.old_3d[0]:
+        old_image, old_registered_bricks, old_bricks, old_image_3d = self.old_3d
+        if old_image is not None:
             score = compute_image_difference_without_mask(
                 self.old_3d[0], color_image)
         if score > 0.994:
-            return self.old_3d
+            return old_image, old_registered_bricks, old_bricks, old_image_3d
         else:
             bricks, image_3d = self.robot.get_brick_poses(
                 registered_bricks,

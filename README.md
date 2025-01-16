@@ -45,3 +45,19 @@ Camera calibration should be done about once a month or if the grasping becomes 
 ## How to run image generation
 - Execute in BlenderProc-main: "blenderproc download cc_textures" and copy cc_textures folder into Brick_Pile_Generation
 - Copy Brick_Pile_Generation in BlenderProc-main and execute python Brick_Pile_Generation/loop.py
+<br>
+<br>
+# Chatbot and robot interface 
+The chatbot interface is done using [Gradio](https://www.gradio.app/). 
+
+Following components are used:
+- Client: 
+  - Sends audio chunks to ther server for translation. 
+  - Sends prompts and function responses to the server.
+- ToolService:
+  - Parses and executes tool calls made from the Llama model 
+- RobotInterface: 
+  - A small wrapper above the PoseEstimationApp, providing the tool call api. 
+
+
+
