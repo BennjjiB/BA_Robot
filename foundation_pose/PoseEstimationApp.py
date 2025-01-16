@@ -10,6 +10,7 @@ from deoxys.experimental.motion_utils import reset_joints_to
 from foundation_pose.helper_functions import *
 from foundation_pose.pybullet_collision_check import get_gripping_points, choose_best_grip
 from foundation_pose.real_sense_reader import *
+from status_helper import update_status
 
 
 class PoseEstimatorApp:
@@ -342,7 +343,6 @@ class PoseEstimatorApp:
         return choose_best_grip(grips)
 
     def start_sort_pipeline(self, registered_bricks, bricks, sort_by_color: bool, min_ssim_score=0.994):
-        self.stop = False
         self.offset_red = 0
         self.offset_orange = 0
         self.offset_yellow = 0
@@ -353,22 +353,26 @@ class PoseEstimatorApp:
         ssim_score = 1
         detections_coherent = True
         bricks_before = registered_bricks.boxes.cls
+        registered_bricks_after = []
 
         while (ssim_score > min_ssim_score and detections_coherent and not self.stop):
             image, _, _ = self.reader.capture_image()
             if not bricks:
-                break
+                update_status("sort_all_bricks", f"Success: No bricks detected, nothing to do.")
+                return "error"
 
             collision_free_brick, _ = get_gripping_points(bricks)
             if not collision_free_brick:
-                break
+                update_status("sort_all_bricks", f"Error: No collision free brick found!")
+                return "error"
 
             index = collision_free_brick[4]
             del bricks[index]
             has_failed = self.sort_brick(
                 collision_free_brick, sort_by_color=sort_by_color)
             if has_failed:
-                break
+                update_status("sort_all_bricks", f"Error: Failed to grab the {collision_free_brick[3][2]} brick")
+                return "error"
 
             start_time = time.time()
             while time.time() - start_time < 0.2:
@@ -387,8 +391,12 @@ class PoseEstimatorApp:
             bricks_before = torch.tensor(sorted(bricks_before))
             bricks_after = torch.sort(registered_bricks_after.boxes.cls).values
             detections_coherent = torch.equal(bricks_before, bricks_after)
+        if len(registered_bricks_after) > 0:
+            print("Not all bricks sorted begin again")
+            return "pending"
         self.stop = False
-        print("Finished sorting all bricks!")
+        update_status("sort_all_bricks", f"Success: Sorted all bricks.")
+        return "finished"
 
     def __grasp(self, grasp):
         self.robot_interface.control(

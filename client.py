@@ -6,6 +6,7 @@ import numpy as np
 import base64
 import json
 
+
 class Client:
     def __init__(self, base_url: str, tool_service: ToolService) -> None:
         self.base_url = base_url
@@ -32,7 +33,7 @@ class Client:
             for chunk in response.iter_content():
                 r = chunk.decode(errors='replace')
                 yield r
-    
+
     def send_audio(self, audio_data, sample_rate):
         payload = {
             'audio_data': audio_data.tolist(),
@@ -45,26 +46,29 @@ class Client:
     def stream_transcription(self, transcript):
         self.transcript = transcript
 
-    def handle_response(self, response):
+    def handle_response(self, response, is_tool_response=False):
         generated_response = ""
         for r in response:
             generated_response += r
             yield {"text": generated_response}
-        tool_threads, parsed_tools = self.tool_service.parse_and_execute_response(generated_response)
-        if tool_threads:
+        if is_tool_response:
+            # Don't allow consecutive tool calls
+            return
+        tool_thread, parsed_tools = self.tool_service.parse_and_execute_response(
+            generated_response)
+        if tool_thread:
             yield {"tool": parsed_tools}
-            yield from self.handle_tool_status_changes(tool_threads)
+            yield from self.handle_tool_status_changes(tool_thread)
 
-    def handle_tool_status_changes(self, threads):
-        while any(thread.is_alive() for thread in threads) or not status_queue.empty():
+    def handle_tool_status_changes(self, thread):
+        while thread.is_alive() or not status_queue.empty():
             try:
-                new_status = status_queue.get(timeout=1)  # Wait for 1 second for an item
+                new_status = status_queue.get(timeout=1)
                 response = self.send_prompt(
                     self.tool_service.get_tool_response_template(new_status), tool_response=True
                 )
-                yield from self.handle_response(response)
+                yield from self.handle_response(response, is_tool_response=True)
             except queue.Empty:
-                if not any(thread.is_alive() for thread in threads):
+                if thread.is_alive():
                     break
                 continue
-        print("All threads are finished and the queue is empty. Exiting.")

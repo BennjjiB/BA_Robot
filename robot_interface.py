@@ -46,8 +46,11 @@ class RobotInterface:
         if self.is_sorting:
             return
         self.is_sorting = True
-        registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
-        self.robot.start_sort_pipeline(registered_bricks, bricks, by_color)
+        sort_status = "pending"
+        while sort_status == "pending":
+            registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
+            sort_status = self.robot.start_sort_pipeline(
+                registered_bricks, bricks, by_color)
         self.is_sorting = False
 
     def grab_brick(self, color: str = "blue"):
@@ -58,8 +61,14 @@ class RobotInterface:
             if brick[2] == color:
                 color_index = id
                 break
+        if color_index == -1:
+            update_status(
+                "grab_brick", f"Error: No collision free brick with color {color} found!")
+            return
         best_grip = self.robot.get_best_grip(grips[color_index])
         self.robot.sort_brick(best_grip, True)
+        update_status(
+            "grab_brick", f"Success: The {color} brick has been grabbed.")
 
     def __get_images_and_brick_poses(self):
         color_image, depth_image, depth_colormap = self.webcam.capture_image()

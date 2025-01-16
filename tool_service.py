@@ -8,32 +8,31 @@ class ToolService():
     def __init__(self, robot_interface: RobotInterface):
         self.available_tools = {
             "sort_all_bricks": robot_interface.sort_bricks,
-            "get_collision_free_bricks": robot_interface.display_collision_free_bricks
+            "get_collision_free_bricks": robot_interface.display_collision_free_bricks,
+            "grab_brick": robot_interface.grab_brick
         }
 
     def parse_and_execute_response(self, tools):
         parsed_tools = self.parse_tools(tools)
-        threads = []
+        thread = None
         if parsed_tools:
-            for tool in parsed_tools:
-                function_name = tool["function_name"]
-                function_to_call = self.available_tools.get(function_name, None)
-                if function_to_call is None:
-                    print(function_to_call, " is not a defined function")
-                    return [], []
-                function_args = tool["arguments"]
-                if "id" in tool:
-                    function_args["tool_id"] = tool["id"]
-                threads.append(
-                    self.start_tool_call(function_to_call, function_args)
-                )
-        return threads, parsed_tools
+            thread = threading.Thread(
+                target=self.start_tool_calls(), args=(parsed_tools)
+            )
+            thread.start()
+        return thread, parsed_tools
 
-    def start_tool_call(self, function_to_call, function_args):
-        thread = threading.Thread(
-            target=function_to_call, args=(function_args,))
-        thread.start()
-        return thread
+    def start_tool_calls(self, parsed_tools):
+        for tool in parsed_tools:
+            function_name = tool["function_name"]
+            function_to_call = self.available_tools.get(function_name, None)
+            if function_to_call is None:
+                print(function_to_call, " is not a defined function")
+                return
+            function_args = tool["arguments"]
+            if "id" in tool:
+                function_args["tool_id"] = tool["id"]
+            function_to_call(**function_args)
 
     def parse_tools(self, tools):
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
@@ -44,7 +43,7 @@ class ToolService():
 
     def get_tool_response_template(self, tool_response):
         dict = {
-            "role": "ipython",
+            "role": "tool",
             "name": tool_response["name"],
             "content": tool_response["content"],
         }

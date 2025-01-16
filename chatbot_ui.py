@@ -10,7 +10,7 @@ def chatbot_ui(client: Client):
         response = client.send_prompt(prompt)
         messages.append(ChatMessage(role="assistant", content=""))
         for chunk in client.handle_response(response):
-            if chunk.get("text").strip():
+            if chunk.get("text"):
                 messages[-1] = ChatMessage(role="assistant", content=chunk.get("text"))
                 yield "", messages
             elif chunk.get("tool"):
