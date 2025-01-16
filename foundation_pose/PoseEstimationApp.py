@@ -379,10 +379,8 @@ class PoseEstimatorApp:
                 image_after_grip, _, _ = self.reader.capture_image()
 
             mask = collision_free_brick[3][3]
-            print(image_after_grip)
             ssim_score = compute_image_difference(
                 image, image_after_grip, mask)
-            print("SSim score:", ssim_score)
             registered_bricks_after = self.maskModel(
                 image_after_grip, iou=0.9, conf=0.6, verbose=False)[0]
             removed_brick = collision_free_brick[3][4].item()
@@ -392,7 +390,6 @@ class PoseEstimatorApp:
             bricks_after = torch.sort(registered_bricks_after.boxes.cls).values
             detections_coherent = torch.equal(bricks_before, bricks_after)
         if len(registered_bricks_after) > 0:
-            print("Not all bricks sorted begin again")
             return "pending"
         self.stop = False
         update_status("sort_all_bricks", f"Success: Sorted all bricks.")
