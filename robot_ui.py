@@ -44,7 +44,6 @@ def robot_ui(robot_interface: RobotInterface):
 
     def start_sorting(option: str):
         if robot_interface.is_sorting:
-            robot_interface.stop_sorting()
             yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
         else:
             yield False, None, gr.Button("Robot is sorting", variant="secondary", size="lg")

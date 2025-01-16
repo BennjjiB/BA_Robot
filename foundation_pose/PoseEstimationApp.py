@@ -350,7 +350,7 @@ class PoseEstimatorApp:
         bricks_before = registered_bricks.boxes.cls
         registered_bricks_after = []
 
-        while (ssim_score > min_ssim_score and detections_coherent and not self.stop):
+        while (ssim_score > min_ssim_score and detections_coherent):
             image, _, _ = self.reader.capture_image()
             if not bricks:
                 return "finished"
