@@ -13,18 +13,18 @@ def chatbot_ui(client: Client):
             if chunk.get("text"):
                 messages[-1] = ChatMessage(role="assistant", content=chunk.get("text"))
                 yield "", messages
+            elif chunk.get("add"):
+                messages.append(ChatMessage(role="assistant", content=""))
             elif chunk.get("tool"):
                 for tool in chunk["tool"]:
                     messages.append(
                         ChatMessage(
                             role="assistant",
                             content=f"{tool}",
-                            metadata={
-                                "title": f"🛠️ Used tool {tool['function_name']}"}
+                            metadata={"title": f"🛠️ Used tool {tool.get('function_name', '')}"}
                         )
                     )
                     yield "", messages
-                messages.append(ChatMessage(role="assistant", content=""))
 
 
     def capture_audio(new_chunk, messages):

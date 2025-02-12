@@ -44,6 +44,9 @@ class Client:
         self.transcript = transcript
 
     def handle_response(self, response, is_tool_response=False):
+        if is_tool_response:
+            # Add a new chat message 
+            yield {"add": True}
         generated_response = ""
         for r in response:
             generated_response += r
