@@ -43,12 +43,9 @@ def robot_ui(robot_interface: RobotInterface):
                               info="Please select the sorting criteria", show_label=True)
 
     def start_sorting(option: str):
-        if robot_interface.is_sorting:
-            yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
-        else:
-            yield False, None, gr.Button("Robot is sorting", variant="secondary", size="lg")
-            robot_interface.sort_bricks(by_color=option == "color")
-            yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
+        yield False, None, gr.Button("Robot is sorting", variant="secondary", size="lg")
+        robot_interface.sort_bricks(by_color=option == "color")
+        yield False, None, gr.Button("Start sorting", variant="primary", size="lg")
 
     sort_button = gr.Button(
         "Start sorting", variant="primary", size="lg")

@@ -14,7 +14,6 @@ class RobotInterface:
         self.maskModel = YOLO('/home/panda3/Desktop/Robot_BA/best.pt')
         self.robot = PoseEstimatorApp(
             reader=self.webcam, maskModel=self.maskModel)
-        self.is_sorting = False
         self.old_3d = (None, None, None, None)
 
     def get_images(self):
@@ -41,20 +40,17 @@ class RobotInterface:
         return cv2.cvtColor(image_3d, cv2.COLOR_BGR2RGB)
 
     def sort_bricks(self, by_color: bool = False):
-        if self.is_sorting:
-            return
         registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
         if not bricks:
             update_status("sort_all_bricks",
                           f"Success: No bricks detected, nothing to do.")
             return
-        self.is_sorting = True
         sort_status = "pending"
         while sort_status == "pending":
             registered_bricks, bricks, _ = self.get_3d_bricks_and_image()
             sort_status = self.robot.start_sort_pipeline(
                 registered_bricks, bricks, by_color)
-        self.is_sorting = False
+        update_status("sort_all_bricks", sort_status)
 
     def grab_brick(self, color: str = "blue"):
         grips, free_bricks = self.get_collision_free_bricks()

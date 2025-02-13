@@ -319,7 +319,6 @@ class PoseEstimatorApp:
             bricks.append([center_pose, size, color, mask, brick_class_id])
 
         return bricks, image_3d
-    
 
     def get_collision_free_bricks_and_grips(self, bricks):
         # [T_base2gripper, wide_grip, center_grip, [T_base2brick, size, color, mask, brick_class_id], id, brick_is_upright, original_pose, grips_z_axis, final_x_offset]
@@ -328,12 +327,13 @@ class PoseEstimatorApp:
         grips = {}
         free_bricks = {}
         for id in brick_class_ids:
-            grip_group = [grip for grip in all_collision_free_grips if grip[3][4] == id]
+            grip_group = [
+                grip for grip in all_collision_free_grips if grip[3][4] == id]
             if grip_group:
                 grips[id] = grip_group
                 free_bricks[id] = grip_group[0][3]
         return grips, free_bricks
-    
+
     def get_best_grip(self, grips):
         return choose_best_grip(grips)
 
@@ -353,20 +353,18 @@ class PoseEstimatorApp:
         while (ssim_score > min_ssim_score and detections_coherent):
             image, _, _ = self.reader.capture_image()
             if not bricks:
-                return "finished"
+                return "Success: Sorted all bricks."
 
             collision_free_brick, _ = get_gripping_points(bricks)
             if not collision_free_brick:
-                update_status("sort_all_bricks", f"Error: No collision free brick found!")
-                return "error"
+                return "Error: No collision free brick found!"
 
             index = collision_free_brick[4]
             del bricks[index]
             has_failed = self.sort_brick(
                 collision_free_brick, sort_by_color=sort_by_color)
             if has_failed:
-                update_status("sort_all_bricks", f"Error: Failed to grab the {collision_free_brick[3][2]} brick")
-                return "error"
+                return f"Error: Failed to grab the {collision_free_brick[3][2]} brick"
 
             start_time = time.time()
             while time.time() - start_time < 0.2:
@@ -383,10 +381,10 @@ class PoseEstimatorApp:
             bricks_before = torch.tensor(sorted(bricks_before))
             bricks_after = torch.sort(registered_bricks_after.boxes.cls).values
             detections_coherent = torch.equal(bricks_before, bricks_after)
-        if len(registered_bricks_after) > 0:
+        if len(bricks_after) > 0:
             return "pending"
-        update_status("sort_all_bricks", f"Success: Sorted all bricks.")
-        return "finished"
+        else:
+            return "Success: Sorted all bricks."
 
     def __grasp(self, grasp):
         self.robot_interface.control(
