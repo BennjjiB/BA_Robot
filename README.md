@@ -34,7 +34,7 @@ Some files from external libraries have been modified:
   ./auto_arm.sh ../config/charmander.yml ../config/control_config.yml  
   ./auto_gripper.sh ../config/charmander.yml ../config/control_config.yml  
   You can use the helper scripts: [run_arm](../run_arm.sh) and [run_gripper](../run_gripper.sh) make sure to change the target directory to your version of deoxys.
-5. Run the PoseEstimationApp.py 
+5. Run the gradio app_ui.py
 
 ## How to calibrate the camera
 Camera calibration should be done about once a month or if the grasping becomes inaccurate. 
